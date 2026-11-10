@@ -29,3 +29,6 @@ venv/
 
 # Results
 names.*
+
+# IDE
+.vscode/
