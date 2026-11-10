@@ -341,6 +341,12 @@ class BackendHandler(BaseHTTPRequestHandler):
                 self._send_file(filepath, content_type="text/plain; charset=utf-8", as_attachment=True, filename=f"{state.outfile}.txt")
             return
 
+        # Serve Favicon directly
+        if path in ("/favicon.ico", "/favicon.svg"):
+            favicon_path = os.path.join(FRONTEND_DIR, "favicon.svg")
+            self._send_file(favicon_path, content_type="image/svg+xml")
+            return
+
         # Serve static assets from frontend/ (CSS, JS, SVG, images)
         safe_path = os.path.normpath(os.path.join(FRONTEND_DIR, path.lstrip("/")))
         if safe_path.startswith(FRONTEND_DIR) and os.path.isfile(safe_path):
