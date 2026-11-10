@@ -35,7 +35,7 @@ def cli():
     args.add_argument(dest='company_name', nargs='?', help='Target company name')
 
     s = args.add_argument_group("Search arguments")
-    s.add_argument('--search', dest='engine', default='google,bing', type=lambda x: utils.delimiter2list(x), help='Search Engine (Default=\'google,bing\')')
+    s.add_argument('--search', dest='engine', default='yahoo,bing,google', type=lambda x: utils.delimiter2list(x), help='Search Engine (Default=\'yahoo,bing,google\')')
 
     o = args.add_argument_group("Output arguments")
     o.add_argument('-f', dest='nformat', type=str, required=True, help='Format names, ex: \'domain\{f}{last}\', \'{first}.{last}@domain.com\'')

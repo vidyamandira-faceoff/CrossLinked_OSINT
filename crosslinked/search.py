@@ -1,11 +1,13 @@
 import logging
 import requests
 import threading
+import base64
+import re
 from time import sleep
 from random import choice
 from bs4 import BeautifulSoup
 from unidecode import unidecode
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 from crosslinked.logger import Log
 from datetime import datetime, timedelta
 from urllib3 import disable_warnings, exceptions
@@ -41,7 +43,8 @@ class CrossLinked:
     def __init__(self, search_engine, target, timeout, conn_timeout=3, proxies=[], jitter=0):
         self.results = []
         self.url = {'google': 'https://www.google.com/search?q=site:linkedin.com/in+"{}"&num=100&start={}',
-                    'bing': 'http://www.bing.com/search?q="{}"+site:linkedin.com/in&first={}'}
+                    'bing': 'https://www.bing.com/search?q="{}"+site:linkedin.com/in&first={}',
+                    'yahoo': 'https://search.yahoo.com/search?p=site%3Alinkedin.com%2Fin+"{}"&b={}'}
 
         self.runtime = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
         self.search_engine = search_engine
@@ -57,7 +60,10 @@ class CrossLinked:
 
         while search_timer.running:
             try:
-                url = self.url[self.search_engine].format(self.target, len(self.results))
+                start_val = len(self.results)
+                if self.search_engine in ('bing', 'yahoo'):
+                    start_val = len(self.results) + 1
+                url = self.url[self.search_engine].format(self.target, start_val)
                 resp = web_request(url, self.conn_timeout, self.proxies)
                 http_code = get_statuscode(resp)
 
@@ -66,8 +72,13 @@ class CrossLinked:
                     Log.warn('None 200 response, exiting search ({})'.format(http_code))
                     break
 
+                prev_count = len(self.results)
                 self.page_parser(resp)
                 Log.info("{:<3} {} ({})".format(len(self.results), url, http_code))
+
+                # If no new results were found on this page, avoid infinite loop
+                if len(self.results) == prev_count:
+                    break
 
                 sleep(self.jitter)
             except KeyboardInterrupt:
@@ -86,7 +97,9 @@ class CrossLinked:
 
     def link_parser(self, url, link):
         u = {'url': url}
-        u['text'] = unidecode(link.text.split("|")[0].split("...")[0])  # Capture link text before trailing chars
+        h = link.find(['h3', 'h2', 'h1'])
+        raw_text = h.text.strip() if h else link.text.strip()
+        u['text'] = unidecode(raw_text.split("|")[0].split("...")[0]).strip()
         u['title'] = self.parse_linkedin_title(u['text'])               # Extract job title
         u['name'] = self.parse_linkedin_name(u['text'])                 # Extract whole name
         return u
@@ -106,11 +119,14 @@ class CrossLinked:
             return False
 
     def results_handler(self, link):
-        url = str(link.get('href')).lower()
-
-        if not extract_subdomain(url).endswith('linkedin.com'):
+        raw_href = link.get('href')
+        url = clean_linkedin_url(raw_href)
+        if not url:
             return False
-        elif 'linkedin.com/in' not in url:
+
+        if not extract_subdomain(url.lower()).endswith('linkedin.com'):
+            return False
+        elif 'linkedin.com/in' not in url.lower():
             return False
 
         data = self.link_parser(url, link)
@@ -156,15 +172,54 @@ def get_agent():
     ])
 
 
+def clean_linkedin_url(raw_href):
+    if not raw_href:
+        return ''
+    raw = str(raw_href)
+    # Yahoo redirect: /RU=https%3a%2f%2f.../RK=...
+    if '/RU=' in raw:
+        target = raw.split('/RU=')[1].split('/RK=')[0]
+        decoded = unquote(target)
+        if 'linkedin.com/in' in decoded:
+            return decoded.split('?')[0].rstrip('/')
+    # Bing base64 redirect: u=a1<base64>
+    if 'u=a1' in raw:
+        m = re.search(r'u=a1([a-zA-Z0-9_\-]+)', raw)
+        if m:
+            b64 = m.group(1).replace('-', '+').replace('_', '/')
+            b64 += '=' * ((4 - len(b64) % 4) % 4)
+            try:
+                dec = base64.b64decode(b64).decode('utf-8', errors='ignore')
+                if 'linkedin.com/in' in dec:
+                    return dec.split('?')[0].rstrip('/')
+            except Exception:
+                pass
+    # Google redirect: /url?q=https://...
+    if '/url?q=' in raw:
+        target = raw.split('/url?q=')[1].split('&')[0]
+        decoded = unquote(target)
+        if 'linkedin.com/in' in decoded:
+            return decoded.split('?')[0].rstrip('/')
+    # Direct link
+    if 'linkedin.com/in' in raw:
+        return raw.split('?')[0].rstrip('/')
+    return ''
+
+
 def web_request(url, timeout=3, proxies=[], **kwargs):
     try:
         s = requests.Session()
-        r = requests.Request('GET', url, headers={'User-Agent': get_agent()}, cookies = {'CONSENT' : 'YES'}, **kwargs)
+        headers = {
+            'User-Agent': get_agent(),
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+        r = requests.Request('GET', url, headers=headers, cookies={'CONSENT': 'YES'}, **kwargs)
         p = r.prepare()
-        return s.send(p, timeout=timeout, verify=False, proxies=get_proxy(proxies))
+        return s.send(p, timeout=timeout, verify=False, proxies=get_proxy(proxies), allow_redirects=True)
     except requests.exceptions.TooManyRedirects as e:
         Log.fail('Proxy Error: {}'.format(e))
-    except:
+    except Exception:
         pass
     return False
 
