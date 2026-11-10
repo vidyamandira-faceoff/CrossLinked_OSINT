@@ -171,7 +171,10 @@ def web_request(url, timeout=3, proxies=[], **kwargs):
 
 def extract_links(resp):
     links = []
-    soup = BeautifulSoup(resp.content, 'lxml')
+    try:
+        soup = BeautifulSoup(resp.content, 'lxml')
+    except Exception:
+        soup = BeautifulSoup(resp.content, 'html.parser')
     for link in soup.findAll('a'):
         links.append(link)
     return links
