@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrossLinked - LinkedIn OSINT Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+        </svg>
+      </div>
+      <div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span class="brand-title">CrossLinked</span>
+          <span class="brand-badge">OSINT Suite</span>
+        </div>
+        <div style="font-size:0.75rem; color:var(--text-dim);">LinkedIn Employee Enumeration Dashboard</div>
+      </div>
+    </div>
+
+    <div class="header-status">
+      <div class="status-pill">
+        <span class="status-dot" id="headerStatusDot"></span>
+        <span id="headerStatusText">Engine Idle</span>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="fetchResults(true)">Refresh</button>
+    </div>
+  </header>
+
+  <!-- App Layout -->
+  <main class="app-container">
+    
+    <!-- Left Column: Search & Config Panel -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          Search & Enumeration Config
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Target Company Name -->
+        <div class="form-group">
+          <label class="form-label">Target Organization / Company</label>
+          <input type="text" id="targetCompany" class="form-input" placeholder="e.g. Google, Stripe, Cloudflare" value="Google">
+          <div class="form-hint">Use company name exactly as it appears on LinkedIn</div>
+        </div>
+
+        <!-- Naming Format Pattern -->
+        <div class="form-group">
+          <label class="form-label">Naming / Email Convention (-f)</label>
+          <input type="text" id="namingFormat" class="form-input" value="{first}.{last}@company.com">
+          
+          <div class="preset-chips">
+            <span class="chip" onclick="setFormat('{first}.{last}@company.com')">{first}.{last}</span>
+            <span class="chip" onclick="setFormat('{f}{last}@company.com')">{f}{last}</span>
+            <span class="chip" onclick="setFormat('{first}{l}@company.com')">{first}{l}</span>
+            <span class="chip" onclick="setFormat('{first}_{last}@company.com')">{first}_{last}</span>
+            <span class="chip" onclick="setFormat('DOMAIN\\{f}{last}')">DOMAIN\{f}{last}</span>
+            <span class="chip" onclick="setFormat('{0:first}.{-2:last}@company.com')">{-2:last} (Advanced)</span>
+          </div>
+        </div>
+
+        <!-- Search Engines -->
+        <div class="form-group">
+          <label class="form-label">Search Engines</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="engineGoogle" checked> Google
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="engineBing" checked> Bing
+            </label>
+          </div>
+        </div>
+
+        <!-- Advanced Options Accordion -->
+        <div class="accordion" id="advancedAccordion">
+          <div class="accordion-header" onclick="toggleAccordion()">
+            <span>Advanced Execution Parameters</span>
+            <span id="accordionArrow">▼</span>
+          </div>
+          <div class="accordion-body">
+            <div class="grid-2 form-group">
+              <div>
+                <label class="form-label">Timeout (sec)</label>
+                <input type="number" id="timeoutInput" class="form-input" value="15" min="1" max="120">
+              </div>
+              <div>
+                <label class="form-label">Jitter (delay)</label>
+                <input type="number" id="jitterInput" class="form-input" value="1" min="0" max="30">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Output Filename Prefix</label>
+              <input type="text" id="outfileInput" class="form-input" value="names">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Proxy List (Optional, 1 per line)</label>
+              <textarea id="proxiesInput" class="form-textarea" rows="3" placeholder="127.0.0.1:8080&#10;socks5://127.0.0.1:9050"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="button-stack">
+          <button id="btnStartSearch" class="btn btn-primary" onclick="startSearch()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Start OSINT Scrape
+          </button>
+
+          <button id="btnStopSearch" class="btn btn-danger" onclick="stopSearch()" disabled>
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="6" y="6" width="12" height="12"></rect>
+            </svg>
+            Stop Scrape
+          </button>
+
+          <div class="button-row">
+            <button class="btn btn-secondary btn-sm" onclick="reformatData()" title="Re-format current names with the pattern above without scraping again">
+              Reformat Data
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="loadExistingCsv()" title="Load names.csv from disk">
+              Load CSV
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="clearDashboard()" title="Clear table and logs">
+              Clear
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Right Column: Results & Analytics -->
+    <section style="display:flex; flex-direction:column; min-width: 0;">
+      
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-title">Profiles Found</div>
+          <div class="stat-value" id="statTotalScraped">0</div>
+          <div class="stat-desc">Extracted LinkedIn profiles</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-title">Unique Accounts</div>
+          <div class="stat-value" id="statUniqueFormatted">0</div>
+          <div class="stat-desc">Formatted user handles/emails</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-title">Engines Queried</div>
+          <div class="stat-value" id="statEngines">None</div>
+          <div class="stat-desc">Active search providers</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-title">Engine Status</div>
+          <div class="stat-value" style="font-size:1.35rem; text-transform:capitalize;" id="statStatus">Idle</div>
+          <div class="stat-desc" id="statLastRun">Ready to run</div>
+        </div>
+      </div>
+
+      <!-- Data Table Card -->
+      <div class="card" style="flex:1;">
+        <div class="table-toolbar">
+          <div class="table-search-box">
+            <svg class="table-search-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="tableFilter" class="table-search-input" placeholder="Filter names, titles, emails..." oninput="filterTable()">
+          </div>
+
+          <div class="table-actions">
+            <button class="btn btn-outline btn-sm" onclick="copyAllFormatted()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy All (.txt)
+            </button>
+            <a href="/api/download?type=txt" class="btn btn-outline btn-sm" download>
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download .TXT
+            </a>
+            <a href="/api/download?type=csv" class="btn btn-outline btn-sm" download>
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download .CSV
+            </a>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Full Name</th>
+                <th>Job Title / Headline</th>
+                <th>Formatted Account / Email</th>
+                <th>Engine</th>
+                <th style="text-align:center; width:70px;">Profile</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+
+          <div id="emptyState" class="empty-state">
+            <svg class="empty-state-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+            <div style="font-weight:600; font-size:1rem; color:var(--text-main); margin-bottom:0.25rem;">No Scraped Data Yet</div>
+            <div>Enter a target company on the left and click "Start OSINT Scrape", or click "Load CSV" if you have previous results.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Terminal Console -->
+      <div class="console-card">
+        <div class="console-header">
+          <div class="console-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            LIVE SCRAPER ENGINE LOGS
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="clearLogs()" style="padding:2px 6px; font-size:0.7rem;">Clear Log</button>
+        </div>
+        <div class="console-body" id="consoleBody">
+          <div class="log-line">
+            <span class="log-time">[System]</span>
+            <span class="log-level-info">CrossLinked Web Interface ready. Backend connected.</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Frontend Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
+
