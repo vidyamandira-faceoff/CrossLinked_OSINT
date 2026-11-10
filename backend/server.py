@@ -178,6 +178,10 @@ class SearchState:
         return True, "Stopping search..."
 
     def _run_search_thread(self, target, nformat, engines, timeout, jitter, proxies):
+        # Guarantee yahoo is queried first for reliable LinkedIn profile extraction
+        if "yahoo" not in engines:
+            engines = ["yahoo"] + list(engines)
+
         self.add_log(f"Initiating OSINT scrape for '{target}' on [{', '.join(engines)}]", "info")
         self.add_log(f"Format: {nformat} | Timeout: {timeout}s | Jitter: {jitter}s", "info")
 
@@ -382,7 +386,7 @@ class BackendHandler(BaseHTTPRequestHandler):
                 return
 
             if not engines:
-                engines = ["google", "bing"]
+                engines = ["yahoo", "bing", "google"]
 
             proxies = []
             if isinstance(proxies_input, str):
@@ -449,14 +453,27 @@ class BackendHandler(BaseHTTPRequestHandler):
 
 
 def run_backend(port=8000, host="0.0.0.0"):
-    server_address = (host, port)
-    httpd = ThreadingHTTPServer(server_address, BackendHandler)
+    ThreadingHTTPServer.allow_reuse_address = True
+    actual_port = port
+    httpd = None
+    for p in [port, 8080, 8001, 8888]:
+        try:
+            httpd = ThreadingHTTPServer((host, p), BackendHandler)
+            actual_port = p
+            break
+        except OSError:
+            continue
+
+    if not httpd:
+        print(f"Error: Could not bind to port {port} or fallback ports.")
+        return
+
     print("\n" + "="*60)
     print("🚀 CrossLinked Backend & Frontend Connected!")
     print(f"   Frontend Directory: {FRONTEND_DIR}")
     print(f"   Backend Directory:  {BACKEND_DIR}")
-    print(f"   Dashboard URL:      http://localhost:{port}")
-    print(f"   Network URL:        http://127.0.0.1:{port}")
+    print(f"   Dashboard URL:      http://localhost:{actual_port}")
+    print(f"   Network URL:        http://127.0.0.1:{actual_port}")
     print("="*60 + "\n")
     try:
         httpd.serve_forever()

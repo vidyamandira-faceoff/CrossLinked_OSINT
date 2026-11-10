@@ -212,8 +212,9 @@ async function pollStatus() {
 async function startSearch() {
   const target = document.getElementById('targetCompany').value.trim();
   const format = document.getElementById('namingFormat').value.trim();
-  const google = document.getElementById('engineGoogle').checked;
-  const bing = document.getElementById('engineBing').checked;
+  const yahoo = document.getElementById('engineYahoo') ? document.getElementById('engineYahoo').checked : true;
+  const google = document.getElementById('engineGoogle') ? document.getElementById('engineGoogle').checked : false;
+  const bing = document.getElementById('engineBing') ? document.getElementById('engineBing').checked : false;
   const timeout = parseFloat(document.getElementById('timeoutInput').value) || 15;
   const jitter = parseFloat(document.getElementById('jitterInput').value) || 1;
   const outfile = document.getElementById('outfileInput').value.trim() || 'names';
@@ -229,8 +230,9 @@ async function startSearch() {
   }
 
   const engines = [];
-  if (google) engines.push('google');
+  if (yahoo) engines.push('yahoo');
   if (bing) engines.push('bing');
+  if (google) engines.push('google');
 
   if (!engines.length) {
     showToast('Please select at least one search engine', 'warn');

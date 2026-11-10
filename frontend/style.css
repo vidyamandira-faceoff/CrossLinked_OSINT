@@ -594,6 +594,12 @@ tr:hover td {
   text-transform: uppercase;
 }
 
+.engine-badge.yahoo {
+  background: rgba(147, 51, 234, 0.15);
+  color: #d8b4fe;
+  border: 1px solid rgba(147, 51, 234, 0.3);
+}
+
 .engine-badge.google {
   background: rgba(59, 130, 246, 0.15);
   color: #93c5fd;
