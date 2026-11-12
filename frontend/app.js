@@ -16,9 +16,134 @@ function showToast(message, type = 'info') {
   }, 3500);
 }
 
-// Preset format click helper
+// Sample names for live preview
+const sampleNames = ['John Smith', 'Sundar Pichai', 'Jane Doe', 'David Michael Brown'];
+let sampleIdx = 0;
+
+// Format name helper for client-side live preview
+function formatNameClient(nformat, name) {
+  if (!nformat || !name) return '';
+  try {
+    const parts = name.trim().split(/\s+/);
+    const f_name = parts[0] || '';
+    const l_name = parts[parts.length - 1] || '';
+
+    let val = nformat;
+    // Replace index placeholders
+    val = val.replace(/\{-2:last\}/g, (parts.length > 2 ? parts[parts.length - 2] : l_name).toLowerCase());
+    val = val.replace(/\{0:first\}/g, f_name.toLowerCase());
+    val = val.replace(/\{1:last\}/g, (parts.length > 1 ? parts[1] : l_name).toLowerCase());
+    // Replace standard placeholders
+    val = val.replace(/\{first\}/g, f_name.toLowerCase());
+    val = val.replace(/\{last\}/g, l_name.toLowerCase());
+    val = val.replace(/\{f\}/g, f_name[0] ? f_name[0].toLowerCase() : '');
+    val = val.replace(/\{l\}/g, l_name[0] ? l_name[0].toLowerCase() : '');
+    return val;
+  } catch (e) {
+    return nformat;
+  }
+}
+
+// Live formula preview updater
+function updateLivePreview() {
+  const fmtInput = document.getElementById('namingFormat');
+  const fmt = (fmtInput ? fmtInput.value.trim() : '') || '{first}.{last}@company.com';
+  const sample = sampleNames[sampleIdx];
+  const emailEl = document.getElementById('previewEmailText');
+  const sampleEl = document.getElementById('previewSampleName');
+  
+  if (emailEl) {
+    emailEl.textContent = formatNameClient(fmt, sample);
+  }
+  if (sampleEl) {
+    sampleEl.textContent = sample;
+  }
+}
+
+function cycleSampleName() {
+  sampleIdx = (sampleIdx + 1) % sampleNames.length;
+  updateLivePreview();
+}
+
+function getCompanyDomain() {
+  const compInput = document.getElementById('targetCompany');
+  const comp = compInput ? compInput.value.trim().toLowerCase() : '';
+  if (!comp) return 'company.com';
+  const clean = comp.replace(/[^a-z0-9]/g, '');
+  return (clean || 'company') + '.com';
+}
+
+function onCompanyChange() {
+  const domain = getCompanyDomain();
+  const fmtInput = document.getElementById('namingFormat');
+  if (fmtInput && fmtInput.value.includes('@')) {
+    const parts = fmtInput.value.split('@');
+    fmtInput.value = parts[0] + '@' + domain;
+  }
+  updateLivePreview();
+}
+
+function setFormatTemplate(pattern, chipEl) {
+  const domain = getCompanyDomain();
+  let fullPattern = pattern;
+  if (pattern.startsWith('DOMAIN\\')) {
+    const compInput = document.getElementById('targetCompany');
+    const comp = compInput ? compInput.value.trim().toUpperCase() : 'DOMAIN';
+    const cleanDomain = comp.replace(/[^A-Z0-9]/g, '') || 'DOMAIN';
+    fullPattern = cleanDomain + '\\' + pattern.replace('DOMAIN\\', '');
+  } else if (!pattern.includes('@')) {
+    fullPattern = pattern + '@' + domain;
+  }
+
+  const fmtInput = document.getElementById('namingFormat');
+  if (fmtInput) {
+    fmtInput.value = fullPattern;
+  }
+
+  // Update active chip styling
+  document.querySelectorAll('.preset-chips .chip').forEach(c => c.classList.remove('active'));
+  if (chipEl) {
+    chipEl.classList.add('active');
+  }
+
+  updateLivePreview();
+  showToast(`Template: ${fullPattern}`);
+}
+
+function toggleEngineCard(engineName) {
+  const chk = document.getElementById('engine' + engineName);
+  const card = document.getElementById('card' + engineName);
+  if (!chk || !card) return;
+  chk.checked = !chk.checked;
+  if (chk.checked) {
+    card.classList.add('active');
+  } else {
+    card.classList.remove('active');
+  }
+}
+
+function updateAccSummary() {
+  const t = document.getElementById('timeoutInput')?.value || 15;
+  const j = document.getElementById('jitterInput')?.value || 2;
+  const pill = document.getElementById('accSummaryPill');
+  if (pill) {
+    pill.textContent = `${t}s • ${j}s delay`;
+  }
+}
+
+function updateProxyCount() {
+  const txt = document.getElementById('proxiesInput')?.value || '';
+  const count = txt.split('\n').map(s => s.trim()).filter(Boolean).length;
+  const hint = document.getElementById('proxyCountHint');
+  if (hint) {
+    hint.textContent = `${count} loaded (Optional)`;
+  }
+}
+
+// Preset format click helper (legacy support)
 function setFormat(fmt) {
   document.getElementById('namingFormat').value = fmt;
+  updateLivePreview();
   showToast(`Format set to: ${fmt}`);
 }
 
@@ -348,5 +473,8 @@ async function clearDashboard() {
 window.addEventListener('DOMContentLoaded', () => {
   fetchResults();
   pollStatus();
+  updateLivePreview();
+  updateAccSummary();
+  updateProxyCount();
 });
 
