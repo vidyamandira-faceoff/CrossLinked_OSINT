@@ -40,110 +40,204 @@
   <main class="app-container">
     
     <!-- Left Column: Search & Config Panel -->
-    <section class="card">
-      <div class="card-header">
+    <section class="card config-panel-card">
+      <div class="card-header config-card-header">
         <div class="card-title">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          Search & Enumeration Config
+          <div class="config-header-icon">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </div>
+          <span>Search &amp; Enumeration Config</span>
         </div>
+        <span class="badge-status-ready">ACTIVE</span>
       </div>
 
       <div class="card-body">
         <!-- Target Company Name -->
         <div class="form-group">
-          <label class="form-label">Target Organization / Company</label>
-          <input type="text" id="targetCompany" class="form-input" placeholder="e.g. Google, Stripe, Cloudflare" value="Google">
-          <div class="form-hint">Use company name exactly as it appears on LinkedIn</div>
+          <div class="label-row">
+            <label class="form-label" for="targetCompany">Target Organization / Company</label>
+            <span class="label-tag">Required</span>
+          </div>
+          <div class="input-with-icon">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M10 11h2M10 15h2M14 11h2M14 15h2M18 11h2M18 15h2M9 3h6v4H9z"/>
+            </svg>
+            <input type="text" id="targetCompany" class="form-input has-icon" placeholder="e.g. Google, Stripe, Microsoft" value="Google" oninput="onCompanyChange()">
+          </div>
+          <div class="form-hint">Matches exact organization name on LinkedIn profiles</div>
         </div>
 
         <!-- Naming Format Pattern -->
         <div class="form-group">
-          <label class="form-label">Naming / Email Convention (-f)</label>
-          <input type="text" id="namingFormat" class="form-input" value="{first}.{last}@company.com">
+          <div class="label-row">
+            <label class="form-label" for="namingFormat">Naming / Email Convention (-f)</label>
+            <span class="label-tag">Formula</span>
+          </div>
+          <div class="input-with-icon">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
+            </svg>
+            <input type="text" id="namingFormat" class="form-input has-icon" value="{first}.{last}@google.com" oninput="updateLivePreview()">
+          </div>
           
-          <div class="preset-chips">
-            <span class="chip" onclick="setFormat('{first}.{last}@company.com')">{first}.{last}</span>
-            <span class="chip" onclick="setFormat('{f}{last}@company.com')">{f}{last}</span>
-            <span class="chip" onclick="setFormat('{first}{l}@company.com')">{first}{l}</span>
-            <span class="chip" onclick="setFormat('{first}_{last}@company.com')">{first}_{last}</span>
-            <span class="chip" onclick="setFormat('DOMAIN\\{f}{last}')">DOMAIN\{f}{last}</span>
-            <span class="chip" onclick="setFormat('{0:first}.{-2:last}@company.com')">{-2:last} (Advanced)</span>
+          <!-- Live Interactive Example Box -->
+          <div class="formula-preview-card">
+            <div class="preview-header">
+              <span class="preview-badge">
+                <span class="preview-pulse-dot"></span> LIVE FORMULA PREVIEW
+              </span>
+              <button type="button" class="preview-cycle-btn" onclick="cycleSampleName()" title="Click to test with another sample name">
+                🔄 <span id="previewSampleName">John Smith</span>
+              </button>
+            </div>
+            <div class="preview-output">
+              <span class="preview-arrow">➔</span>
+              <code class="preview-email" id="previewEmailText">john.smith@google.com</code>
+            </div>
+          </div>
+
+          <div class="preset-chips-container">
+            <div class="preset-chips-label">Quick Patterns:</div>
+            <div class="preset-chips">
+              <span class="chip active" onclick="setFormatTemplate('{first}.{last}', this)">{first}.{last}</span>
+              <span class="chip" onclick="setFormatTemplate('{f}{last}', this)">{f}{last}</span>
+              <span class="chip" onclick="setFormatTemplate('{first}{l}', this)">{first}{l}</span>
+              <span class="chip" onclick="setFormatTemplate('{first}_{last}', this)">{first}_{last}</span>
+              <span class="chip" onclick="setFormatTemplate('DOMAIN\\{f}{last}', this)">DOMAIN\{f}{last}</span>
+              <span class="chip" onclick="setFormatTemplate('{0:first}.{-2:last}', this)">{-2:last}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Search Engines -->
+        <!-- Search Engines Selector -->
         <div class="form-group">
-          <label class="form-label">Search Engines</label>
-          <div class="checkbox-group">
-            <label class="checkbox-label">
-              <input type="checkbox" id="engineYahoo" checked> Yahoo (Recommended)
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="engineBing" checked> Bing
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="engineGoogle"> Google
-            </label>
+          <div class="label-row">
+            <label class="form-label">Search Engines</label>
+            <span class="label-hint">Select providers</span>
+          </div>
+          <div class="engine-cards-grid">
+            
+            <div class="engine-toggle-card active yahoo" id="cardYahoo" onclick="toggleEngineCard('Yahoo')">
+              <input type="checkbox" id="engineYahoo" checked class="hidden-engine-checkbox">
+              <div class="engine-card-top">
+                <span class="engine-badge-icon yahoo">Y!</span>
+                <span class="engine-pill-rec">Recommended</span>
+              </div>
+              <div class="engine-card-bottom">
+                <span class="engine-card-name">Yahoo</span>
+                <span class="engine-check-indicator">✓</span>
+              </div>
+            </div>
+
+            <div class="engine-toggle-card active bing" id="cardBing" onclick="toggleEngineCard('Bing')">
+              <input type="checkbox" id="engineBing" checked class="hidden-engine-checkbox">
+              <div class="engine-card-top">
+                <span class="engine-badge-icon bing">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M5 3v18l7-4 7 4V3z"/></svg>
+                </span>
+                <span class="engine-pill-std">Direct</span>
+              </div>
+              <div class="engine-card-bottom">
+                <span class="engine-card-name">Bing</span>
+                <span class="engine-check-indicator">✓</span>
+              </div>
+            </div>
+
+            <div class="engine-toggle-card google" id="cardGoogle" onclick="toggleEngineCard('Google')">
+              <input type="checkbox" id="engineGoogle" class="hidden-engine-checkbox">
+              <div class="engine-card-top">
+                <span class="engine-badge-icon google">G</span>
+                <span class="engine-pill-std">Optional</span>
+              </div>
+              <div class="engine-card-bottom">
+                <span class="engine-card-name">Google</span>
+                <span class="engine-check-indicator">✓</span>
+              </div>
+            </div>
+
           </div>
         </div>
 
         <!-- Advanced Options Accordion -->
         <div class="accordion" id="advancedAccordion">
           <div class="accordion-header" onclick="toggleAccordion()">
-            <span>Advanced Execution Parameters</span>
+            <div class="accordion-header-left">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              <span>Execution Parameters</span>
+              <span class="acc-summary-pill" id="accSummaryPill">15s • 2s jitter</span>
+            </div>
             <span id="accordionArrow">▼</span>
           </div>
           <div class="accordion-body">
             <div class="grid-2 form-group">
               <div>
-                <label class="form-label">Timeout (sec)</label>
-                <input type="number" id="timeoutInput" class="form-input" value="15" min="1" max="120">
+                <label class="form-label" for="timeoutInput">Timeout</label>
+                <div class="stepper-input">
+                  <input type="number" id="timeoutInput" class="form-input" value="15" min="1" max="120" onchange="updateAccSummary()">
+                  <span class="input-suffix">sec</span>
+                </div>
               </div>
               <div>
-                <label class="form-label">Jitter (delay)</label>
-                <input type="number" id="jitterInput" class="form-input" value="1" min="0" max="30">
+                <label class="form-label" for="jitterInput">Jitter</label>
+                <div class="stepper-input">
+                  <input type="number" id="jitterInput" class="form-input" value="2" min="0" max="30" onchange="updateAccSummary()">
+                  <span class="input-suffix">delay</span>
+                </div>
               </div>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Output Filename Prefix</label>
-              <input type="text" id="outfileInput" class="form-input" value="names">
+              <label class="form-label" for="outfileInput">Output Prefix</label>
+              <input type="text" id="outfileInput" class="form-input" value="names" placeholder="e.g. names">
+              <div class="form-hint">Generates <code>&lt;prefix&gt;.txt</code> &amp; <code>&lt;prefix&gt;.csv</code></div>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Proxy List (Optional, 1 per line)</label>
-              <textarea id="proxiesInput" class="form-textarea" rows="3" placeholder="127.0.0.1:8080&#10;socks5://127.0.0.1:9050"></textarea>
+              <div class="label-row">
+                <label class="form-label" for="proxiesInput">Proxies</label>
+                <span class="label-hint" id="proxyCountHint">0 loaded (Optional)</span>
+              </div>
+              <textarea id="proxiesInput" class="form-textarea" rows="3" placeholder="127.0.0.1:8080&#10;socks5://127.0.0.1:9050" oninput="updateProxyCount()"></textarea>
             </div>
           </div>
         </div>
 
-        <!-- Action Buttons -->
+        <!-- Action Buttons Stack -->
         <div class="button-stack">
-          <button id="btnStartSearch" class="btn btn-primary" onclick="startSearch()">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            Start OSINT Scrape
+          <button id="btnStartSearch" class="btn btn-primary btn-scrape-cta" onclick="startSearch()">
+            <span class="btn-cta-icon">
+              <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </span>
+            <span class="btn-cta-text">Start OSINT Scrape</span>
           </button>
 
-          <button id="btnStopSearch" class="btn btn-danger" onclick="stopSearch()" disabled>
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12"></rect>
+          <button id="btnStopSearch" class="btn btn-danger btn-stop-cta" onclick="stopSearch()" disabled>
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+              <rect x="6" y="6" width="12" height="12" rx="2"></rect>
             </svg>
-            Stop Scrape
+            Stop Active Scrape
           </button>
 
-          <div class="button-row">
-            <button class="btn btn-secondary btn-sm" onclick="reformatData()" title="Re-format current names with the pattern above without scraping again">
-              Reformat Data
+          <div class="utility-button-grid">
+            <button class="btn btn-secondary btn-sm util-btn" onclick="reformatData()" title="Reformat names with the current pattern">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+              Reformat
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="loadExistingCsv()" title="Load names.csv from disk">
+            <button class="btn btn-secondary btn-sm util-btn" onclick="loadExistingCsv()" title="Load names.csv from disk">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
               Load CSV
             </button>
-            <button class="btn btn-outline btn-sm" onclick="clearDashboard()" title="Clear table and logs">
+            <button class="btn btn-outline btn-sm util-btn" onclick="clearDashboard()" title="Clear table and logs">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               Clear
             </button>
           </div>
